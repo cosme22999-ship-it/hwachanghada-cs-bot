@@ -82,8 +82,8 @@ class CSBot:
         verified_path: str | Path,
         kakao_path: Optional[str | Path] = None,
         model_name: Optional[str] = None,
-        emb_weight: float = 0.7,
-        bm25_weight: float = 0.3,
+        emb_weight: float = 0.78,
+        bm25_weight: float = 0.22,
     ):
         self.emb_w = emb_weight
         self.bm25_w = bm25_weight
@@ -200,7 +200,7 @@ class CSBot:
     def answer(
         self,
         user_input: str,
-        verified_threshold: float = 0.50,
+        verified_threshold: float = 0.45,
         kakao_threshold: float = 0.65,
     ) -> dict:
         user_input = (user_input or "").strip()

@@ -18,5 +18,6 @@ _temp_*
 .DS_Store
 Thumbs.db
 
-# 데이터 (data/verified_faq.json은 git에 포함되므로 명시적으로 트래킹)
+# 데이터: 압축본(.gz)만 git에 포함, 원본은 제외
+data/verified_faq.json
 # data/*.db는 ignore (위에서 처리)

@@ -28,11 +28,14 @@ DATA_DIR = HERE / "data"
 
 # ===== 경로 설정 =====
 DEFAULT_VERIFIED_CLOUD = DATA_DIR / "verified_faq.json"
+DEFAULT_VERIFIED_CLOUD_GZ = DATA_DIR / "verified_faq.json.gz"
 DEFAULT_VERIFIED_LOCAL = Path(r"C:\Users\깡대표\OneDrive\문서\CS봇_검증FAQ.json")
 
-# 클라우드: data/verified_faq.json (git에 포함)
-# 로컬: 기존 OneDrive 경로 폴백
-if DEFAULT_VERIFIED_CLOUD.exists():
+# 클라우드: data/verified_faq.json[.gz] (git에 포함, .gz 우선)
+# 로컬: OneDrive vault 경로 폴백
+if DEFAULT_VERIFIED_CLOUD_GZ.exists():
+    DEFAULT_VERIFIED = DEFAULT_VERIFIED_CLOUD_GZ
+elif DEFAULT_VERIFIED_CLOUD.exists():
     DEFAULT_VERIFIED = DEFAULT_VERIFIED_CLOUD
 else:
     DEFAULT_VERIFIED = DEFAULT_VERIFIED_LOCAL

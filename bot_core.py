@@ -5,11 +5,24 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import re
 from pathlib import Path
 from typing import Optional
+
+
+def _open_json(path):
+    """json 또는 json.gz 자동 인식"""
+    p = Path(path)
+    if str(p).endswith(".gz"):
+        return gzip.open(p, "rt", encoding="utf-8")
+    # .gz 우선 시도 (운영 환경)
+    gz = p.with_suffix(p.suffix + ".gz") if not str(p).endswith(".gz") else None
+    if gz and gz.exists() and not p.exists():
+        return gzip.open(gz, "rt", encoding="utf-8")
+    return open(p, "r", encoding="utf-8")
 
 import numpy as np
 from rank_bm25 import BM25Okapi
@@ -75,7 +88,7 @@ class CSBot:
         self.emb_w = emb_weight
         self.bm25_w = bm25_weight
 
-        with open(verified_path, "r", encoding="utf-8") as f:
+        with _open_json(verified_path) as f:
             self.verified = json.load(f)
 
         # 모델은 검증FAQ에 기록된 것 우선, 환경변수, 인자 순으로

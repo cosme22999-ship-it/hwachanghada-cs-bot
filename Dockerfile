@@ -27,8 +27,8 @@ COPY bot_core.py server.py ./
 COPY static ./static
 COPY data ./data
 
-# Render는 PORT 환경변수 동적 할당
-ENV PORT=10000
-EXPOSE 10000
+# HF Spaces는 7860, Render는 동적 PORT — 둘 다 PORT 환경변수로 처리
+ENV PORT=7860
+EXPOSE 7860
 
 CMD ["python", "server.py"]

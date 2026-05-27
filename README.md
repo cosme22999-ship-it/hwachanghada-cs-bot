@@ -1,6 +1,16 @@
+---
+title: Hwachanghada CS Bot
+emoji: ☀️
+colorFrom: red
+colorTo: pink
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # 화창하다 CS봇
 
-옵시디언 vault의 검증 FAQ 56개를 기반으로 24시간 운영되는 CS 챗봇.
+옵시디언 vault의 검증 FAQ를 기반으로 24시간 운영되는 CS 챗봇.
 
 ## 두 가지 모드
 

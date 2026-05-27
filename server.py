@@ -69,6 +69,14 @@ if not VERIFIED_PATH.exists():
 print(f"[server] DB: {DB_PATH}")
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+# 영구 백업/복원: HF_TOKEN 있으면 시작 시 DB 복원 시도
+try:
+    from backup import restore_db, start_periodic_backup, backup_db
+    restore_db(DB_PATH)
+except Exception as e:
+    print(f"[server] backup module 로드 실패: {e}")
+    restore_db = backup_db = start_periodic_backup = lambda *a, **k: False
+
 
 # ===== DB 초기화 =====
 def init_db():
@@ -804,4 +812,9 @@ if __name__ == "__main__":
     host = os.environ.get("CSBOT_HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", os.environ.get("CSBOT_PORT", "8765")))
     print(f"[server] http://{host}:{port}")
+    # 주기적 백업 스레드 시작
+    try:
+        start_periodic_backup(DB_PATH)
+    except Exception as e:
+        print(f"[server] 백업 스레드 시작 실패: {e}")
     uvicorn.run(app, host=host, port=port, log_level="info")

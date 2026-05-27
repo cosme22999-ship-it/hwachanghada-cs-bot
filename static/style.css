@@ -5,11 +5,11 @@
   --card: #ffffff;
   --text: #1f2937;
   --muted: #6b7280;
-  --primary: #ff6b9d;
-  --primary-hover: #ff4d8a;
-  --primary-soft: #ffe9f1;
+  --primary: #D60019;
+  --primary-hover: #B30015;
+  --primary-soft: #FFEBEE;
   --bot-bubble: #f1f3f8;
-  --user-bubble: #ff6b9d;
+  --user-bubble: #D60019;
   --border: #e5e7eb;
   --success: #10b981;
   --warning: #f59e0b;
@@ -27,21 +27,60 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-.app {
-  max-width: 760px;
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) minmax(280px, 340px);
+  gap: 18px;
+  max-width: 1140px;
   margin: 0 auto;
+  height: 100vh;
+  padding: 0;
+}
+
+.app {
   height: 100vh;
   display: flex; flex-direction: column;
   background: var(--card);
   box-shadow: 0 0 40px rgba(0,0,0,0.04);
+  min-width: 0;
 }
+
+/* 우측 공지 */
+.side-notice {
+  padding: 18px 18px 18px 0;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.notice-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.notice-card.highlight {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+  box-shadow: 0 2px 8px rgba(214, 0, 25, 0.12);
+}
+.notice-emoji { font-size: 26px; margin-bottom: 6px; }
+.notice-icon { display: block; margin-bottom: 8px; border-radius: 8px; }
+.notice-card h3 {
+  margin: 0 0 8px; font-size: 15px;
+  color: var(--text);
+}
+.notice-card.highlight h3 { color: var(--primary); }
+.notice-card p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; color: var(--text); }
+.notice-card p.small { font-size: 12px; color: var(--muted); }
+.notice-card ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.7; color: var(--text); }
+.notice-card a { color: var(--primary); text-decoration: underline; }
 
 /* 헤더 */
 .header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, #fff5f8 0%, #fff 100%);
+  background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
 }
 .brand { display: flex; align-items: center; gap: 12px; }
 .logo {
@@ -51,6 +90,7 @@ html, body {
   border-radius: 12px;
   font-size: 22px;
 }
+.logo img { width: 40px; height: 40px; display: block; }
 .brand-text h1 { margin: 0; font-size: 17px; font-weight: 700; }
 .brand-text p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 
@@ -62,8 +102,14 @@ html, body {
   font-size: 13px;
   color: var(--muted);
   cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .ghost-btn:hover { background: var(--bg); color: var(--text); }
+.header-actions { display: flex; gap: 6px; align-items: center; }
+.ghost-btn.icon-btn { padding: 6px 10px; font-size: 16px; line-height: 1; }
 
 /* 채팅 영역 */
 .chat {
@@ -82,9 +128,10 @@ html, body {
   border-radius: 50%;
   display: grid; place-items: center;
   font-size: 16px;
+  overflow: hidden;
 }
 .message.bot .avatar { background: var(--primary-soft); }
-.message.user .avatar { background: #e0e7ff; }
+.message.user .avatar { background: var(--primary-soft); }
 
 .bubble {
   padding: 12px 14px;
@@ -128,6 +175,57 @@ html, body {
 .tag.success { background: #d1fae5; color: #065f46; }
 .tag.warning { background: #fef3c7; color: #92400e; }
 .tag.danger { background: #fee2e2; color: #991b1b; }
+
+/* 피드백 바 */
+.feedback {
+  display: flex; gap: 6px; align-items: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.fb-btn {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: inherit;
+}
+.fb-btn:hover { background: var(--primary-soft); color: var(--primary-hover); border-color: var(--primary); }
+.fb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.fb-btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
+.fb-btn.primary:hover { background: var(--primary-hover); }
+.fb-status { font-size: 12px; color: var(--muted); }
+.fb-comment {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  background: #FFF8F8;
+  border: 1px solid #FFD1D6;
+  border-radius: 10px;
+}
+.fb-guide {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7A1620;
+}
+.fb-guide b { color: var(--primary); }
+.fb-comment-row { display: flex; gap: 6px; align-items: stretch; }
+.fb-comment-row textarea {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 38px;
+}
+.fb-comment-row textarea:focus { border-color: var(--primary); }
+.fb-comment-row .fb-btn { white-space: nowrap; }
 
 /* 대안 질문 */
 .alts {
@@ -226,6 +324,24 @@ html, body {
   30% { opacity: 1; transform: translateY(-3px); }
 }
 
+/* 사이드 숨김 (좁은 화면) - 채팅 위 콤팩트 안내로 대체 */
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
+  .app { height: 100vh; max-width: 760px; margin: 0 auto; }
+  .side-notice {
+    order: -1; /* 채팅 위로 */
+    padding: 12px 14px 0;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 10px;
+  }
+  .notice-card { min-width: 260px; padding: 14px; }
+}
+
 /* 모바일 */
 @media (max-width: 640px) {
   .app { height: 100dvh; }
@@ -234,4 +350,5 @@ html, body {
   .chat { padding: 14px; }
   .bubble { font-size: 13px; }
   .composer { padding: 10px 14px; }
+  .side-notice { padding: 10px 12px 0; }
 }

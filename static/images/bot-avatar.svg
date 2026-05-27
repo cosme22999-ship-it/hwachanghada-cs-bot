@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="화창하다 CS봇">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#E81233"/>
+      <stop offset="100%" stop-color="#B30015"/>
+    </radialGradient>
+    <radialGradient id="face" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#F2F4F8"/>
+    </radialGradient>
+    <radialGradient id="signal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFEB85"/>
+      <stop offset="60%" stop-color="#FFC83D"/>
+      <stop offset="100%" stop-color="#FFA500"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 빨간 배경 -->
+  <circle cx="50" cy="50" r="50" fill="url(#bg)"/>
+
+  <!-- 햇살 백드롭 (살짝만, 옅게) -->
+  <g fill="#ffffff" opacity="0.15">
+    <polygon points="50,12 47,30 53,30"/>
+    <polygon points="50,12 38,31 41,31"/>
+    <polygon points="50,12 28,32 32,32"/>
+    <polygon points="50,12 59,30 62,30"/>
+    <polygon points="50,12 68,31 71,31"/>
+    <polygon points="50,12 78,32 82,32"/>
+  </g>
+
+  <!-- 안테나 -->
+  <line x1="50" y1="22" x2="50" y2="34" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="50" cy="19" r="4" fill="url(#signal)"/>
+
+  <!-- 로봇 머리 (둥근 사각) -->
+  <rect x="26" y="36" width="48" height="42" rx="12" fill="url(#face)"/>
+
+  <!-- 귀(스피커) - 직사각 -->
+  <rect x="22" y="51" width="5" height="13" rx="2" fill="#ffffff"/>
+  <rect x="73" y="51" width="5" height="13" rx="2" fill="#ffffff"/>
+
+  <!-- 눈 (작은 동글) -->
+  <circle cx="40" cy="54" r="3.3" fill="#2C2C2C"/>
+  <circle cx="60" cy="54" r="3.3" fill="#2C2C2C"/>
+  <circle cx="41.3" cy="52.8" r="1.3" fill="#ffffff"/>
+  <circle cx="61.3" cy="52.8" r="1.3" fill="#ffffff"/>
+
+  <!-- 입 (작고 부드러운 톤) -->
+  <path d="M 43 66 Q 50 70 57 66" stroke="#7A1620" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+  <!-- 볼터치 -->
+  <ellipse cx="32.5" cy="65" rx="2.8" ry="2" fill="#FFB3BA" opacity="0.5"/>
+  <ellipse cx="67.5" cy="65" rx="2.8" ry="2" fill="#FFB3BA" opacity="0.5"/>
+</svg>

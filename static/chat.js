@@ -67,8 +67,110 @@ function renderMarkdown(text) {
   return out.join("\n");
 }
 
+// ========== 피드백 ==========
+async function sendFeedback(payload) {
+  try {
+    const r = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return r.ok;
+  } catch (e) { return false; }
+}
+
+function attachFeedbackBar(bubble, question, content, meta) {
+  // 환영 메시지 / 타이핑 / 빈 메시지 / 사용자 메시지는 피드백 X
+  if (!question || content === "__typing__") return;
+  if (meta && meta.status === "empty") return;
+
+  const bar = document.createElement("div");
+  bar.className = "feedback";
+
+  const good = document.createElement("button");
+  good.className = "fb-btn";
+  good.type = "button";
+  good.innerHTML = "👍 도움됐어요";
+
+  const bad = document.createElement("button");
+  bad.className = "fb-btn";
+  bad.type = "button";
+  bad.innerHTML = "👎 답변 수정 필요";
+
+  const status = document.createElement("span");
+  status.className = "fb-status";
+
+  const commentWrap = document.createElement("div");
+  commentWrap.className = "fb-comment";
+  commentWrap.style.display = "none";
+
+  const guide = document.createElement("div");
+  guide.className = "fb-guide";
+  guide.innerHTML =
+    "<b>🙏 어떤 답이 정확한지 꼭 작성 부탁드려요</b><br>" +
+    "임원진이 직접 보고 답변을 수정합니다. " +
+    "한 분의 의견 하나하나가 봇 정확도에 큰 도움이 됩니다.";
+
+  const commentRow = document.createElement("div");
+  commentRow.className = "fb-comment-row";
+  const commentInput = document.createElement("textarea");
+  commentInput.rows = 2;
+  commentInput.placeholder = "이런 답이 맞다고 생각해요 — 정확한 답변 내용을 적어주세요 (꼭 부탁드립니다)";
+  const commentSend = document.createElement("button");
+  commentSend.className = "fb-btn primary";
+  commentSend.type = "button";
+  commentSend.textContent = "전송";
+  commentRow.appendChild(commentInput);
+  commentRow.appendChild(commentSend);
+
+  commentWrap.appendChild(guide);
+  commentWrap.appendChild(commentRow);
+
+  const basePayload = () => ({
+    question,
+    matched_id: meta && meta.matched_id ? meta.matched_id : null,
+    answer: content,
+    confidence: meta && typeof meta.confidence === "number" ? meta.confidence : null,
+  });
+
+  good.addEventListener("click", async () => {
+    good.disabled = true; bad.disabled = true;
+    const ok = await sendFeedback({ ...basePayload(), rating: "good" });
+    bar.innerHTML = "";
+    status.textContent = ok ? "👍 피드백 감사합니다!" : "전송 실패";
+    bar.appendChild(status);
+  });
+
+  bad.addEventListener("click", () => {
+    bad.disabled = true; good.disabled = true;
+    commentWrap.style.display = "flex";
+    commentInput.focus();
+  });
+
+  commentSend.addEventListener("click", async () => {
+    commentSend.disabled = true;
+    const ok = await sendFeedback({
+      ...basePayload(),
+      rating: "bad",
+      comment: commentInput.value.trim(),
+    });
+    bar.innerHTML = "";
+    status.textContent = ok ? "👎 피드백 감사합니다! 관리자가 검토할게요." : "전송 실패";
+    bar.appendChild(status);
+  });
+  commentInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") commentSend.click();
+  });
+
+  bar.appendChild(good);
+  bar.appendChild(bad);
+  bar.appendChild(status);
+  bubble.appendChild(bar);
+  bubble.appendChild(commentWrap);
+}
+
 // ========== 메시지 추가 ==========
-function addMessage(role, content, meta) {
+function addMessage(role, content, meta, opts) {
   const wrap = document.createElement("div");
   wrap.className = `message ${role}`;
 
@@ -152,6 +254,11 @@ function addMessage(role, content, meta) {
     }
   }
 
+  // 봇 답변에 피드백 바 (의도적 응답에만)
+  if (role === "bot" && opts && opts.question) {
+    attachFeedbackBar(bubble, opts.question, content, meta);
+  }
+
   wrap.appendChild(avatar);
   wrap.appendChild(bubble);
   $chat.appendChild(wrap);
@@ -171,7 +278,10 @@ function saveHistory(role, content, meta) {
 function loadHistory() {
   try {
     const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    for (const m of h) addMessage(m.role, m.content, m.meta);
+    for (const m of h) {
+      const opts = m.meta && m.meta._q ? { question: m.meta._q } : undefined;
+      addMessage(m.role, m.content, m.meta, opts);
+    }
     return h.length;
   } catch (e) { return 0; }
 }
@@ -185,9 +295,10 @@ function clearHistory() {
 function showWelcome() {
   addMessage(
     "bot",
-    "안녕하세요! **화창하다 CS봇**입니다 💕\n\n" +
-    "화장품 사업, 제품 개발, 강의, 미션, 배송 등 무엇이든 물어보세요.\n" +
-    "검증된 56개 FAQ 데이터베이스를 기반으로 답변드립니다.\n\n" +
+    "안녕하세요! **화창하다 CS봇**입니다 ☀️\n\n" +
+    "💡 **\"이것까지 물어봐도 되나?\"** 싶은 것들을 **부담 없이 다 물어보세요.**\n" +
+    "화장품 사업, 제품 개발, 강의, 미션, 배송 등 무엇이든 24시간 답변드립니다.\n\n" +
+    "정확한 답변이 어려운 경우 채널톡이나 본인 집중코칭방으로 안내드려요.\n" +
     "아래 추천 질문을 눌러보시거나 직접 입력해주세요!"
   );
 }
@@ -225,8 +336,8 @@ async function send(question) {
       warning: data.warning,
       alternatives: data.alternatives,
     };
-    addMessage("bot", data.answer, meta);
-    saveHistory("bot", data.answer, meta);
+    addMessage("bot", data.answer, meta, { question });
+    saveHistory("bot", data.answer, { ...meta, _q: question });
 
     $srcLine.textContent = "출처: " + (data.source || "");
   } catch (err) {

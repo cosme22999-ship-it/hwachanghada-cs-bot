@@ -21,10 +21,18 @@ CHANNEL_TALK_EDUCATION = "https://pf.kakao.com/_xcxoxkVX/friend"
 
 TRIGGER_KEYWORDS_MANUFACTURING = [
     "내 제품", "제 제품", "우리 제품", "내제품", "제제품",
-    "전성분", "전 성분",
+    # "전성분"은 일반 정책 질문(Q70)도 있어서 트리거에서 제외 — 개인 정보 요청은 "내/제/우리 제품" 키워드로 잡힘
     "언제 나와", "언제 출고", "언제 출시",
     "진행 상황", "진행상황", "어디까지 됐", "어디까지 진행",
     "내 견적", "내 단가", "내 유통기한", "내 로트",
+]
+
+# 회사명/관계 키워드 - 봇이 답변하지 않고 교육 채널톡으로 안내
+# (레드메디코스는 강미정 대표 명함에 도메인이 포함되어 있어 트리거에서 제외)
+# 정반합: 기수에 따라 내용이 다르므로 봇이 일률적으로 안내하지 않음
+TRIGGER_KEYWORDS_COMPANY_INFO = [
+    "콰브",
+    "정반합",
 ]
 
 FALLBACK_MSG_MANUFACTURING = (
@@ -32,6 +40,13 @@ FALLBACK_MSG_MANUFACTURING = (
     "**화창하다 제조지원 채널톡**으로 문의 부탁드립니다 🙏\n\n"
     f"👉 {CHANNEL_TALK_MANUFACTURING}\n\n"
     "**기수·성함·제품명**을 함께 남겨주시면 빠르게 확인 도와드리겠습니다!"
+)
+
+FALLBACK_MSG_COMPANY_INFO = (
+    "관련 안내는 담당 멘토님께 직접 확인 부탁드립니다 🙏\n\n"
+    "멘토 연락처를 모르신다면 **화창하다 교육지원 채널톡**으로 문의주세요!\n"
+    f"👉 {CHANNEL_TALK_EDUCATION}\n\n"
+    "**기수·성함·연락처**와 함께 남겨주시면 빠르게 안내드리겠습니다!"
 )
 
 FALLBACK_MSG_NO_MATCH = (
@@ -80,11 +95,11 @@ class CSBot:
             for v_text, v_emb in zip(item["variant_texts"], item["variant_embeddings"]):
                 self.variant_index.append({"faq_idx": faq_idx, "text": v_text})
                 variant_vecs.append(v_emb)
-        self.variant_vecs = np.array(variant_vecs, dtype=np.float32)
+        self.variant_vecs = np.array(variant_vecs, dtype=np.float32) if variant_vecs else np.zeros((0, 0), dtype=np.float32)
         print(f"[bot] 검증 FAQ {len(self.verified['faqs'])}개 / 변형(질문+별칭) {len(self.variant_index)}개")
 
         self.bm25_corpus = [item["tokens"] for item in self.verified["faqs"]]
-        self.bm25 = BM25Okapi(self.bm25_corpus)
+        self.bm25 = BM25Okapi(self.bm25_corpus) if self.bm25_corpus else None
 
         self.kakao_index: list[dict] = []
         self.kakao_vecs_norm: Optional[np.ndarray] = None
@@ -114,6 +129,14 @@ class CSBot:
     def _is_manufacturing_trigger(text: str) -> Optional[str]:
         t = text.replace(" ", "")
         for kw in TRIGGER_KEYWORDS_MANUFACTURING:
+            if kw.replace(" ", "") in t:
+                return kw
+        return None
+
+    @staticmethod
+    def _is_company_info_trigger(text: str) -> Optional[str]:
+        t = text.replace(" ", "")
+        for kw in TRIGGER_KEYWORDS_COMPANY_INFO:
             if kw.replace(" ", "") in t:
                 return kw
         return None
@@ -183,6 +206,18 @@ class CSBot:
                 "alternatives": [],
             }
 
+        company_trigger = self._is_company_info_trigger(user_input)
+        if company_trigger:
+            return {
+                "status": "trigger_company_info",
+                "answer": FALLBACK_MSG_COMPANY_INFO,
+                "category": "교육지원톡 안내",
+                "trigger_keyword": company_trigger,
+                "confidence": 100.0,
+                "source": "keyword_trigger",
+                "alternatives": [],
+            }
+
         q_vec = self._embed(user_input)
         v_hits = self._search_verified(user_input, q_vec, top_k=3)
 
@@ -247,4 +282,80 @@ class CSBot:
             "categories": self.verified.get("categories", {}),
             "kakao_fallback_count": len(self.kakao_index),
             "model": self.model_name,
+            "custom_faq_count": sum(1 for f in self.verified["faqs"] if f.get("custom")),
         }
+
+    # ===== 동적 FAQ 관리 (관리자용) =====
+    def _embed_variants(self, variants: list[str]) -> list[list[float]]:
+        """질문 + 별칭 임베딩 (정규화)"""
+        vecs = self.model.encode(variants, show_progress_bar=False, convert_to_numpy=True)
+        norms = np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-10
+        return (vecs / norms).astype(np.float32).tolist()
+
+    def _build_tokens(self, variants: list[str], answer: str) -> list[str]:
+        """BM25용 토큰"""
+        return list(set(
+            sum([tokenize(v) for v in variants], [])
+            + tokenize(answer)[:50]
+        ))
+
+    def _rebuild_indexes(self) -> None:
+        """검증 + 커스텀 합쳐서 variant_index/variant_vecs/bm25 재구성"""
+        self.variant_index = []
+        variant_vecs = []
+        for faq_idx, item in enumerate(self.verified["faqs"]):
+            for v_text, v_emb in zip(item["variant_texts"], item["variant_embeddings"]):
+                self.variant_index.append({"faq_idx": faq_idx, "text": v_text})
+                variant_vecs.append(v_emb)
+        self.variant_vecs = np.array(variant_vecs, dtype=np.float32) if variant_vecs else np.zeros((0, 0), dtype=np.float32)
+        self.bm25_corpus = [item["tokens"] for item in self.verified["faqs"]]
+        self.bm25 = BM25Okapi(self.bm25_corpus) if self.bm25_corpus else None
+
+    def add_custom_faq(self, qid: str, question: str, answer: str,
+                        aliases: list[str] | None = None,
+                        category: str = "관리자 추가") -> dict:
+        """관리자 페이지에서 FAQ 추가. 임베딩 즉시 생성하고 인덱스에 합침."""
+        aliases = aliases or []
+        variants = [question] + aliases
+        item = {
+            "id": qid,
+            "category": category,
+            "question": question,
+            "answer": answer,
+            "aliases": aliases,
+            "variant_texts": variants,
+            "variant_embeddings": self._embed_variants(variants),
+            "tokens": self._build_tokens(variants, answer),
+            "custom": True,
+        }
+        # 기존 같은 id 있으면 교체
+        existing_idx = next((i for i, f in enumerate(self.verified["faqs"]) if f["id"] == qid), None)
+        if existing_idx is not None:
+            self.verified["faqs"][existing_idx] = item
+        else:
+            self.verified["faqs"].append(item)
+        self._rebuild_indexes()
+        return item
+
+    def remove_custom_faq(self, qid: str) -> bool:
+        """관리자가 추가한 FAQ만 삭제 가능 (검증 FAQ는 보호)"""
+        for i, f in enumerate(self.verified["faqs"]):
+            if f["id"] == qid and f.get("custom"):
+                del self.verified["faqs"][i]
+                self._rebuild_indexes()
+                return True
+        return False
+
+    def list_custom_faqs(self) -> list[dict]:
+        """관리자 추가 FAQ만 반환 (임베딩/토큰 제외, UI용)"""
+        return [
+            {
+                "id": f["id"],
+                "question": f["question"],
+                "answer": f["answer"],
+                "aliases": f.get("aliases", []),
+                "category": f.get("category", ""),
+            }
+            for f in self.verified["faqs"]
+            if f.get("custom")
+        ]

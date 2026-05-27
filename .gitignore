@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.env
+*.db
+*.db-journal
+
+# 로컬 캐시
+.cache/
+
+# 임시 파일
+*.log
+_smoke_test.py
+_temp_*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 데이터 (data/verified_faq.json은 git에 포함되므로 명시적으로 트래킹)
+# data/*.db는 ignore (위에서 처리)

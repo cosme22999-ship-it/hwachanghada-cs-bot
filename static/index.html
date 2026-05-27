@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>화창하다 CS봇</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="brand">
+      <div class="logo">🤖</div>
+      <div class="brand-text">
+        <h1>화창하다 CS봇</h1>
+        <p id="stats-line">검증 FAQ 기반 자동 응답</p>
+      </div>
+    </div>
+    <button id="clear-btn" class="ghost-btn" title="대화 초기화">↻ 초기화</button>
+  </header>
+
+  <main id="chat" class="chat" aria-live="polite"></main>
+
+  <section class="suggestions" id="suggestions">
+    <button class="chip" data-q="화장품 사업 처음 시작하려면 뭐부터 해야 해요?">사업 시작 첫걸음</button>
+    <button class="chip" data-q="MOQ가 얼마예요?">MOQ가 얼마?</button>
+    <button class="chip" data-q="제품 개발 기간은 얼마나 걸려요?">개발 기간</button>
+    <button class="chip" data-q="샘플 받아볼 수 있나요?">샘플 신청</button>
+    <button class="chip" data-q="용기는 어디서 구해야 하나요?">용기 구매</button>
+    <button class="chip" data-q="타겟 제품 어디로 보내요?">택배 주소</button>
+  </section>
+
+  <form id="form" class="composer" autocomplete="off">
+    <textarea
+      id="input"
+      placeholder="질문을 입력하세요 (Enter 전송 · Shift+Enter 줄바꿈)"
+      rows="1"
+      required
+    ></textarea>
+    <button id="send" type="submit">전송</button>
+  </form>
+
+  <footer class="footer">
+    <span>© 화창하다 · CS봇 v1.0</span>
+    <span id="src-line"></span>
+  </footer>
+</div>
+
+<script src="/static/chat.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hwachanghada-cs-bot
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: CSBOT_ADMIN_PASSWORD
+        generateValue: true
+      - key: CSBOT_MODEL
+        value: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+      - key: CSBOT_LOG_THRESHOLD
+        value: "65.0"

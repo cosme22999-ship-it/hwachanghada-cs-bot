@@ -140,6 +140,14 @@ def _migrate_db():
             if cols and "resolved" not in cols:
                 conn.execute("ALTER TABLE feedback ADD COLUMN resolved INTEGER NOT NULL DEFAULT 0")
                 print("[db] feedback.resolved 컬럼 추가 완료")
+
+            ucols = [r[1] for r in conn.execute("PRAGMA table_info(unmatched_log)").fetchall()]
+            if ucols and "admin_note" not in ucols:
+                conn.execute("ALTER TABLE unmatched_log ADD COLUMN admin_note TEXT")
+                print("[db] unmatched_log.admin_note 컬럼 추가 완료")
+            if ucols and "resolved" not in ucols:
+                conn.execute("ALTER TABLE unmatched_log ADD COLUMN resolved INTEGER NOT NULL DEFAULT 0")
+                print("[db] unmatched_log.resolved 컬럼 추가 완료")
     except Exception as e:
         print(f"[db] 마이그레이션 실패: {e}")
 
@@ -352,9 +360,6 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(security)):
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(_: str = Depends(require_admin)):
     with db() as conn:
-        unmatched = conn.execute(
-            "SELECT * FROM unmatched_log ORDER BY created_at DESC LIMIT 200"
-        ).fetchall()
         total_q = conn.execute("SELECT COUNT(*) FROM query_log").fetchone()[0]
         total_u = conn.execute("SELECT COUNT(*) FROM unmatched_log").fetchone()[0]
         recent_status = conn.execute(
@@ -376,21 +381,6 @@ def admin_page(_: str = Depends(require_admin)):
                GROUP BY matched_id ORDER BY c DESC LIMIT 15"""
         ).fetchall()
 
-    rows_html = []
-    for r in unmatched:
-        badge = "🔴" if r["status"] == "no_match" else "🟡"
-        alt = ""
-        if r["top_alt_question"]:
-            alt = f"<div class='alt'>가장 가까운 FAQ: <b>[{r['top_alt_id']}]</b> {escape(r['top_alt_question'])} ({r['top_alt_confidence']:.1f}%)</div>"
-        rows_html.append(f"""
-        <tr>
-          <td class='ts'>{r['created_at']}</td>
-          <td>{badge} {r['status']} {f"({r['confidence']:.1f}%)" if r['confidence'] else ""}</td>
-          <td>
-            <div class='q'>{escape(r['question'])}</div>
-            {alt}
-          </td>
-        </tr>""")
 
     status_rows = "".join(
         f"<li><b>{escape(r['status'])}</b>: {r['c']:,}회</li>"
@@ -526,15 +516,13 @@ th {{ background: #fafbff; font-weight: 600; color: #6b7280; }}
 
 <!-- ===== 미매칭 로그 ===== -->
 <h2 class="section">🔍 미매칭/저확신 질문 로그</h2>
+<div class="sub">학생이 묻고 봇이 답 못 했거나 저확신으로 답한 질문 — <b>📝 FAQ로 만들기</b> 버튼으로 폼에 자동 채워서 바로 추가 가능.</div>
 <div class="actions">
   <a class="btn" href="/admin/export.csv">📥 CSV 다운로드</a>
   <a class="btn" href="/">← 봇으로 돌아가기</a>
 </div>
 
-<table>
-  <thead><tr><th>시각</th><th>상태</th><th>질문</th></tr></thead>
-  <tbody>{''.join(rows_html) if rows_html else '<tr><td colspan="3" style="text-align:center; padding: 30px; color: #6b7280;">아직 미매칭 질문이 없습니다 🎉</td></tr>'}</tbody>
-</table>
+<div id="unmatched-list"></div>
 
 <div id="toast" class="toast"></div>
 
@@ -634,6 +622,68 @@ def admin_update_faq(faq_id: str, faq: FaqCreate, _: str = Depends(require_admin
 
     item = bot.add_custom_faq(qid=faq_id, question=q, answer=a, aliases=aliases, category=faq.category)
     return {"ok": True, "id": faq_id, "updated_at": now}
+
+
+# ===== 미매칭 로그 관리 =====
+@app.get("/admin/api/unmatched")
+def admin_list_unmatched(_: str = Depends(require_admin)):
+    """미매칭/저확신 질문 목록 (최근 300건)"""
+    with db() as conn:
+        rows = conn.execute(
+            """SELECT id, created_at, question, status, confidence,
+                      matched_id, matched_question, top_alt_id, top_alt_question,
+                      top_alt_confidence, admin_note, resolved
+               FROM unmatched_log
+               ORDER BY resolved ASC, created_at DESC
+               LIMIT 300"""
+        ).fetchall()
+    return {
+        "unmatched": [
+            {
+                "id": r["id"],
+                "created_at": r["created_at"],
+                "question": r["question"],
+                "status": r["status"],
+                "confidence": r["confidence"],
+                "matched_id": r["matched_id"],
+                "matched_question": r["matched_question"],
+                "top_alt_id": r["top_alt_id"],
+                "top_alt_question": r["top_alt_question"],
+                "top_alt_confidence": r["top_alt_confidence"],
+                "admin_note": r["admin_note"],
+                "resolved": bool(r["resolved"]),
+            }
+            for r in rows
+        ]
+    }
+
+
+class UnmatchedNoteUpdate(BaseModel):
+    admin_note: str | None = None
+    resolved: bool | None = None
+
+
+@app.patch("/admin/api/unmatched/{log_id}")
+def admin_update_unmatched(log_id: int, body: UnmatchedNoteUpdate, _: str = Depends(require_admin)):
+    """미매칭 로그에 관리자 메모 / 해결 표시"""
+    fields, values = [], []
+    if body.admin_note is not None:
+        fields.append("admin_note=?")
+        values.append(body.admin_note.strip()[:2000])
+    if body.resolved is not None:
+        fields.append("resolved=?")
+        values.append(1 if body.resolved else 0)
+    if not fields:
+        raise HTTPException(status_code=400, detail="no fields to update")
+    values.append(log_id)
+    with _log_lock, db() as conn:
+        cur = conn.execute(
+            f"UPDATE unmatched_log SET {', '.join(fields)} WHERE id=?",
+            values,
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="log not found")
+    return {"ok": True}
 
 
 # ===== 피드백 관리자 코멘트 =====

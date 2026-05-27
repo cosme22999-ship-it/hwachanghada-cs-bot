@@ -303,7 +303,139 @@
     });
   }
 
+  // ===== 미매칭 로그 (👀 답 못 한 질문) =====
+  const $umList = $("unmatched-list");
+  let __unmatched = [];
+
+  async function loadUnmatched() {
+    if (!$umList) return;
+    try {
+      const data = await api("/admin/api/unmatched");
+      __unmatched = data.unmatched || [];
+      renderUnmatched();
+    } catch (e) {
+      $umList.innerHTML =
+        '<div class="fb-empty">미매칭 로그 로드 실패: ' + escapeHtml(e.message) + "</div>";
+    }
+  }
+
+  function renderUnmatched() {
+    if (!__unmatched.length) {
+      $umList.innerHTML =
+        '<div class="fb-empty">아직 미매칭 질문이 없습니다 🎉</div>';
+      return;
+    }
+    const html = __unmatched
+      .map((u) => {
+        const badge = u.status === "no_match" ? "🔴 매칭실패" : "🟡 저확신";
+        const confStr = u.confidence ? ` (${u.confidence.toFixed(1)}%)` : "";
+        const alt = u.top_alt_question
+          ? `<div class="student-comment empty">가장 가까운 FAQ: <b>[${escapeHtml(
+              u.top_alt_id || ""
+            )}]</b> ${escapeHtml(u.top_alt_question)} (${u.top_alt_confidence?.toFixed(
+              1
+            )}%)</div>`
+          : "";
+        const resolvedClass = u.resolved ? " resolved" : "";
+        const resolvedBtnText = u.resolved ? "↩️ 미해결로" : "✅ 처리완료";
+        const resolvedBadge = u.resolved
+          ? '<span style="color:#10b981;font-weight:600">✅ 처리완료</span>'
+          : "";
+        return `
+        <div class="fb-row${resolvedClass}" data-id="${u.id}">
+          <div class="meta">
+            <span class="ts">${escapeHtml(u.created_at)}</span>
+            <span class="id">${badge}${confStr}</span>
+            ${resolvedBadge}
+          </div>
+          <div class="q">${escapeHtml(u.question)}</div>
+          ${alt}
+          <div class="admin-note">
+            <label>📝 관리자 메모</label>
+            <textarea data-um-note="${u.id}" placeholder="예: 비슷한 질문 자주 나옴 → Q22 별칭 보강 완료">${escapeHtml(
+          u.admin_note || ""
+        )}</textarea>
+            <div class="row-actions">
+              <button class="btn primary" data-um-make-faq="${u.id}">📝 이 질문으로 FAQ 만들기</button>
+              <button class="btn" data-um-save-note="${u.id}">💾 메모 저장</button>
+              <button class="btn" data-um-toggle="${u.id}">${resolvedBtnText}</button>
+              <span class="saved" data-um-saved="${u.id}"></span>
+            </div>
+          </div>
+        </div>`;
+      })
+      .join("");
+    $umList.innerHTML = html;
+  }
+
+  if ($umList) {
+    $umList.addEventListener("click", async (e) => {
+      const t = e.target;
+
+      // FAQ 만들기 - 폼에 자동 채움
+      if (t.dataset.umMakeFaq) {
+        const id = t.dataset.umMakeFaq;
+        const u = __unmatched.find((x) => x.id == id);
+        if (!u) return;
+        resetForm();
+        $q.value = u.question;
+        $a.focus();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        toast("질문이 폼에 입력됨 → 답변 작성 후 + 추가");
+        return;
+      }
+
+      // 메모 저장
+      if (t.dataset.umSaveNote) {
+        const id = t.dataset.umSaveNote;
+        const ta = $umList.querySelector(`textarea[data-um-note="${id}"]`);
+        if (!ta) return;
+        t.disabled = true;
+        try {
+          await api("/admin/api/unmatched/" + id, {
+            method: "PATCH",
+            body: JSON.stringify({ admin_note: ta.value }),
+          });
+          const saved = $umList.querySelector(`[data-um-saved="${id}"]`);
+          if (saved) {
+            saved.textContent = "저장됨";
+            setTimeout(() => (saved.textContent = ""), 2000);
+          }
+          const u = __unmatched.find((x) => x.id == id);
+          if (u) u.admin_note = ta.value;
+        } catch (err) {
+          toast("저장 실패: " + err.message);
+        } finally {
+          t.disabled = false;
+        }
+        return;
+      }
+
+      // 처리완료 토글
+      if (t.dataset.umToggle) {
+        const id = t.dataset.umToggle;
+        const u = __unmatched.find((x) => x.id == id);
+        if (!u) return;
+        t.disabled = true;
+        try {
+          await api("/admin/api/unmatched/" + id, {
+            method: "PATCH",
+            body: JSON.stringify({ resolved: !u.resolved }),
+          });
+          u.resolved = !u.resolved;
+          renderUnmatched();
+        } catch (err) {
+          toast("실패: " + err.message);
+        } finally {
+          t.disabled = false;
+        }
+        return;
+      }
+    });
+  }
+
   // ===== 초기화 =====
   loadFaqs();
   loadFeedback();
+  loadUnmatched();
 })();

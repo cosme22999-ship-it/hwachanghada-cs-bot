@@ -30,7 +30,7 @@ from sentence_transformers import SentenceTransformer
 
 
 CHANNEL_TALK_MANUFACTURING = "https://pf.kakao.com/_WxhHVX/friend"
-CHANNEL_TALK_EDUCATION = "https://pf.kakao.com/_xcxoxkVX/friend"
+# 교육·강의·미션은 본인 집중코칭방으로 안내 (개별 톡방이라 단일 링크 없음)
 
 TRIGGER_KEYWORDS_MANUFACTURING = [
     "내 제품", "제 제품", "우리 제품", "내제품", "제제품",
@@ -57,16 +57,14 @@ FALLBACK_MSG_MANUFACTURING = (
 
 FALLBACK_MSG_COMPANY_INFO = (
     "관련 안내는 담당 멘토님께 직접 확인 부탁드립니다 🙏\n\n"
-    "멘토 연락처를 모르신다면 **화창하다 교육지원 채널톡**으로 문의주세요!\n"
-    f"👉 {CHANNEL_TALK_EDUCATION}\n\n"
+    "멘토 연락처를 모르신다면 본인이 참여 중인 **집중코칭방**에 문의해주세요!\n\n"
     "**기수·성함·연락처**와 함께 남겨주시면 빠르게 안내드리겠습니다!"
 )
 
 FALLBACK_MSG_NO_MATCH = (
     "죄송합니다. 정확한 답변을 찾지 못했습니다.\n\n"
-    "교육 관련 문의는 **화창하다 교육지원 채널톡**\n"
-    f"👉 {CHANNEL_TALK_EDUCATION}\n\n"
-    "화장품 개발/제조 관련 문의는 **화창하다 제조지원 채널톡**\n"
+    "📚 **강의·미션·교육 관련 문의** → 본인이 참여 중인 **집중코칭방**에 문의해주세요.\n\n"
+    "🧪 **성분·연구소·화장품 개발 관련 문의** → **화창하다 제조지원 채널톡**\n"
     f"👉 {CHANNEL_TALK_MANUFACTURING}\n\n"
     "**기수·성함·연락처**와 함께 문의 남겨주세요!"
 )

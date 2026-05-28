@@ -384,6 +384,21 @@ $sugs.addEventListener("click", (e) => {
   }
 });
 
+// 모바일 안내 모달
+const $infoBtn = document.getElementById("info-btn");
+const $infoModal = document.getElementById("info-modal");
+if ($infoBtn && $infoModal) {
+  $infoBtn.addEventListener("click", () => {
+    $infoModal.hidden = false;
+  });
+  $infoModal.addEventListener("click", (e) => {
+    if (e.target.dataset.close) $infoModal.hidden = true;
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$infoModal.hidden) $infoModal.hidden = true;
+  });
+}
+
 // ========== 초기화 ==========
 async function init() {
   const count = loadHistory();

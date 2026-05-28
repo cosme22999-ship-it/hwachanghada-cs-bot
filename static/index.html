@@ -19,8 +19,9 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="info-btn" class="ghost-btn icon-btn mobile-only" title="안내 보기" type="button">ℹ️</button>
         <a href="/admin" target="_blank" rel="noopener" class="ghost-btn icon-btn" title="관리자 페이지">⚙️</a>
-        <button id="clear-btn" class="ghost-btn" title="대화 초기화">↻ 초기화</button>
+        <button id="clear-btn" class="ghost-btn" title="대화 초기화" type="button">↻ <span class="hide-mobile">초기화</span></button>
       </div>
     </header>
 
@@ -103,6 +104,34 @@
       </p>
     </div>
   </aside>
+</div>
+
+<!-- 모바일 안내 모달 -->
+<div id="info-modal" class="modal" hidden>
+  <div class="modal-backdrop" data-close="1"></div>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2>봇 사용 안내</h2>
+      <button class="modal-close" data-close="1" type="button">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-card">
+        <h3>☀️ 이 봇을 왜 만들었나요?</h3>
+        <p><b>"이것까지 물어봐도 되나?"</b> 싶은 것들을 모두 부담 없이 여기에 물어보시라는 취지입니다.</p>
+      </div>
+      <div class="modal-card highlight">
+        <h3>🙏 답변이 이상하면 알려주세요</h3>
+        <p>봇 답변 아래 <b>👎 답변 수정 필요</b>를 눌러서 정확한 답을 알려주세요. 임원진이 직접 보고 업데이트합니다.</p>
+      </div>
+      <div class="modal-card">
+        <h3>💬 채널톡 연결</h3>
+        <p>봇이 답 못 하면 직접 문의해주세요 — 별도 연락은 드리지 않습니다.<br>
+          교육: <a href="https://pf.kakao.com/_xcxoxkVX/friend" target="_blank" rel="noopener">교육지원톡</a><br>
+          제조: <a href="https://pf.kakao.com/_WxhHVX/friend" target="_blank" rel="noopener">제조지원톡</a>
+        </p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="/static/chat.js"></script>

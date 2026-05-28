@@ -100,32 +100,6 @@ function attachFeedbackBar(bubble, question, content, meta) {
   const status = document.createElement("span");
   status.className = "fb-status";
 
-  const commentWrap = document.createElement("div");
-  commentWrap.className = "fb-comment";
-  commentWrap.style.display = "none";
-
-  const guide = document.createElement("div");
-  guide.className = "fb-guide";
-  guide.innerHTML =
-    "<b>🙏 어떤 답이 정확한지 꼭 작성 부탁드려요</b><br>" +
-    "임원진이 직접 보고 답변을 수정합니다. " +
-    "한 분의 의견 하나하나가 봇 정확도에 큰 도움이 됩니다.";
-
-  const commentRow = document.createElement("div");
-  commentRow.className = "fb-comment-row";
-  const commentInput = document.createElement("textarea");
-  commentInput.rows = 2;
-  commentInput.placeholder = "이런 답이 맞다고 생각해요 — 정확한 답변 내용을 적어주세요 (꼭 부탁드립니다)";
-  const commentSend = document.createElement("button");
-  commentSend.className = "fb-btn primary";
-  commentSend.type = "button";
-  commentSend.textContent = "전송";
-  commentRow.appendChild(commentInput);
-  commentRow.appendChild(commentSend);
-
-  commentWrap.appendChild(guide);
-  commentWrap.appendChild(commentRow);
-
   const basePayload = () => ({
     question,
     matched_id: meta && meta.matched_id ? meta.matched_id : null,
@@ -141,32 +115,20 @@ function attachFeedbackBar(bubble, question, content, meta) {
     bar.appendChild(status);
   });
 
-  bad.addEventListener("click", () => {
+  bad.addEventListener("click", async () => {
     bad.disabled = true; good.disabled = true;
-    commentWrap.style.display = "flex";
-    commentInput.focus();
-  });
-
-  commentSend.addEventListener("click", async () => {
-    commentSend.disabled = true;
-    const ok = await sendFeedback({
-      ...basePayload(),
-      rating: "bad",
-      comment: commentInput.value.trim(),
-    });
+    const ok = await sendFeedback({ ...basePayload(), rating: "bad" });
     bar.innerHTML = "";
-    status.textContent = ok ? "👎 피드백 감사합니다! 관리자가 검토할게요." : "전송 실패";
+    status.textContent = ok
+      ? "👎 피드백 감사합니다! 관리자가 확인 후 수정해드릴게요."
+      : "전송 실패";
     bar.appendChild(status);
-  });
-  commentInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") commentSend.click();
   });
 
   bar.appendChild(good);
   bar.appendChild(bad);
   bar.appendChild(status);
   bubble.appendChild(bar);
-  bubble.appendChild(commentWrap);
 }
 
 // ========== 메시지 추가 ==========

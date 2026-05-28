@@ -176,7 +176,7 @@ function addMessage(role, content, meta, opts) {
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
-  avatar.textContent = role === "bot" ? "🤖" : "🙋";
+  avatar.textContent = role === "bot" ? "💁‍♀️" : "🙋";
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
@@ -188,49 +188,15 @@ function addMessage(role, content, meta, opts) {
   }
 
   if (meta) {
-    const metaEl = document.createElement("div");
-    metaEl.className = "meta";
-
-    if (meta.category) {
-      const t = document.createElement("span");
-      t.className = "tag";
-      t.textContent = "📂 " + meta.category;
-      metaEl.appendChild(t);
-    }
-    if (meta.matched_id) {
-      const t = document.createElement("span");
-      t.className = "tag muted";
-      t.textContent = meta.matched_id;
-      metaEl.appendChild(t);
-    }
-    if (typeof meta.confidence === "number") {
-      const t = document.createElement("span");
-      const c = meta.confidence;
-      t.className = "tag " + (c >= 70 ? "success" : c >= 50 ? "" : "warning");
-      t.textContent = `확신도 ${c.toFixed(1)}%`;
-      metaEl.appendChild(t);
-    }
-    if (meta.status === "trigger_manufacturing") {
-      const t = document.createElement("span");
-      t.className = "tag danger";
-      t.textContent = "🔔 제조지원톡 자동 안내";
-      metaEl.appendChild(t);
-    }
-    if (meta.status === "no_match") {
-      const t = document.createElement("span");
-      t.className = "tag warning";
-      t.textContent = "매칭 실패";
-      metaEl.appendChild(t);
-    }
+    // 학생 화면에서는 내부 메타(카테고리/ID/확신도/상태) 숨김 — 관리자는 /admin 페이지에서 확인
     if (meta.warning) {
       const w = document.createElement("div");
       w.style.marginTop = "6px";
       w.style.fontSize = "12px";
       w.style.color = "#92400e";
       w.textContent = "⚠️ " + meta.warning;
-      metaEl.appendChild(w);
+      bubble.appendChild(w);
     }
-    bubble.appendChild(metaEl);
 
     if (meta.alternatives && meta.alternatives.length > 0) {
       const alts = document.createElement("div");
@@ -297,7 +263,7 @@ function showWelcome() {
     "bot",
     "안녕하세요, **화창하다 CS봇**입니다 ☀️\n\n" +
     "화장품 사업, 제품 개발, 강의, 미션, 배송 등 무엇이든 편하게 물어보세요. 24시간 답변드립니다.\n\n" +
-    "정확한 답변이 어려운 경우 채널톡 또는 본인 집중코칭방으로 안내드려요.\n" +
+    "정확한 답변이 어려운 경우 **채널톡 또는 본인 집중코칭방에 문의**해주세요.\n" +
     "아래 추천 질문을 눌러보시거나 직접 입력해주세요!"
   );
 }
@@ -403,12 +369,7 @@ async function init() {
   const count = loadHistory();
   if (count === 0) showWelcome();
 
-  try {
-    const res = await fetch("/api/stats");
-    const s = await res.json();
-    $statsLine.textContent =
-      `검증 FAQ ${s.verified_faq_count}개 · 변형 ${s.variant_count}개 · 카톡 폴백 ${s.kakao_fallback_count}개`;
-  } catch (e) { /* ignore */ }
+  // stats는 관리자 페이지에서만 — 학생 화면 stats-line은 정적 문구 유지
 
   $input.focus();
 }

@@ -517,6 +517,16 @@ th {{ background: #fafbff; font-weight: 600; color: #6b7280; }}
 
 <div id="faq-list"></div>
 
+<!-- ===== 📚 검증 FAQ 수정 ===== -->
+<h2 class="section">📚 검증 FAQ 수정 (전체 {len(bot.verified["faqs"])}개)</h2>
+<div class="sub">외부에서도 검증 FAQ 답변·별칭을 직접 수정 가능. <b>✏️ 수정</b> 버튼 누르면 위 폼에 자동 채워지고, 저장하면 즉시 봇에 반영됩니다.</div>
+
+<div style="margin-bottom: 12px;">
+  <input id="verified-search" type="search" placeholder="🔍 ID·질문·답변·별칭·카테고리로 검색"
+         style="width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; box-sizing:border-box;">
+</div>
+<div id="verified-list"></div>
+
 <!-- ===== 👎 피드백 목록 ===== -->
 <h2 class="section">👎 답변 수정 필요 (사용자 피드백)</h2>
 <div class="sub">학생 피드백을 보고 <b>관리자 메모</b>를 작성하거나, 답변을 보완한 뒤 <b>처리완료</b>로 표시하세요.</div>
@@ -570,6 +580,24 @@ def admin_list_faqs(_: str = Depends(require_admin)):
     return {"faqs": bot.list_custom_faqs()}
 
 
+@app.get("/admin/api/verified-faqs")
+def admin_list_verified_faqs(_: str = Depends(require_admin)):
+    """검증 FAQ 전체 목록 (수정용, 임베딩/토큰 등 메타데이터 제외)"""
+    return {
+        "faqs": [
+            {
+                "id": f["id"],
+                "question": f["question"],
+                "answer": f["answer"],
+                "aliases": f.get("aliases", []),
+                "category": f.get("category", ""),
+                "custom": bool(f.get("custom")),
+            }
+            for f in bot.verified["faqs"]
+        ]
+    }
+
+
 @app.post("/admin/api/faqs")
 def admin_create_faq(faq: FaqCreate, _: str = Depends(require_admin)):
     """새 FAQ 추가 - 임베딩 생성하고 즉시 검색 가능"""
@@ -609,28 +637,35 @@ def admin_create_faq(faq: FaqCreate, _: str = Depends(require_admin)):
 
 @app.put("/admin/api/faqs/{faq_id}")
 def admin_update_faq(faq_id: str, faq: FaqCreate, _: str = Depends(require_admin)):
-    """기존 커스텀 FAQ 수정"""
-    with db() as conn:
-        existing = conn.execute("SELECT id FROM custom_faqs WHERE id=?", (faq_id,)).fetchone()
-    if not existing:
-        raise HTTPException(status_code=404, detail="faq not found")
-
+    """기존 FAQ 수정 — 커스텀 FAQ 또는 검증 FAQ override"""
     q = (faq.question or "").strip()
     a = (faq.answer or "").strip()
     if not q or not a:
         raise HTTPException(status_code=400, detail="question/answer required")
 
+    # 검증 FAQ인지 확인 (override 케이스)
+    is_verified = any(f["id"] == faq_id for f in bot.verified["faqs"])
+    with db() as conn:
+        custom_row = conn.execute("SELECT id FROM custom_faqs WHERE id=?", (faq_id,)).fetchone()
+
+    if not is_verified and not custom_row:
+        raise HTTPException(status_code=404, detail="faq not found")
+
     aliases = [s.strip() for s in (faq.aliases or []) if s and s.strip()]
     now = datetime.now().isoformat(timespec="seconds")
 
     with _log_lock, db() as conn:
+        # INSERT OR REPLACE — 검증 FAQ override든 커스텀 수정이든 같은 테이블 사용
         conn.execute(
-            "UPDATE custom_faqs SET question=?, answer=?, aliases=?, category=?, updated_at=? WHERE id=?",
-            (q, a, json.dumps(aliases, ensure_ascii=False), faq.category, now, faq_id),
+            """INSERT OR REPLACE INTO custom_faqs (id, question, answer, aliases, category, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?,
+                       COALESCE((SELECT created_at FROM custom_faqs WHERE id=?), ?),
+                       ?)""",
+            (faq_id, q, a, json.dumps(aliases, ensure_ascii=False), faq.category, faq_id, now, now),
         )
 
-    item = bot.add_custom_faq(qid=faq_id, question=q, answer=a, aliases=aliases, category=faq.category)
-    return {"ok": True, "id": faq_id, "updated_at": now}
+    bot.add_custom_faq(qid=faq_id, question=q, answer=a, aliases=aliases, category=faq.category)
+    return {"ok": True, "id": faq_id, "updated_at": now, "override": is_verified}
 
 
 # ===== 미매칭 로그 관리 =====

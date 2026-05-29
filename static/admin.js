@@ -434,8 +434,105 @@
     });
   }
 
+  // ===== 검증 FAQ 수정 (104개) =====
+  const $vList = $("verified-list");
+  const $vSearch = $("verified-search");
+  let __verified = [];
+
+  async function loadVerified() {
+    if (!$vList) return;
+    try {
+      const data = await api("/admin/api/verified-faqs");
+      __verified = data.faqs || [];
+      renderVerified($vSearch ? $vSearch.value : "");
+    } catch (e) {
+      $vList.innerHTML =
+        '<div class="fb-empty">검증 FAQ 로드 실패: ' + escapeHtml(e.message) + "</div>";
+    }
+  }
+
+  function renderVerified(filter) {
+    const q = (filter || "").trim().toLowerCase();
+    const items = q
+      ? __verified.filter(
+          (f) =>
+            f.id.toLowerCase().includes(q) ||
+            (f.question || "").toLowerCase().includes(q) ||
+            (f.answer || "").toLowerCase().includes(q) ||
+            (f.category || "").toLowerCase().includes(q) ||
+            (f.aliases || []).some((a) => a.toLowerCase().includes(q))
+        )
+      : __verified;
+
+    if (!items.length) {
+      $vList.innerHTML =
+        '<div class="fb-empty">검색 결과 없음</div>';
+      return;
+    }
+
+    const html = items
+      .slice(0, 50)
+      .map((f) => {
+        const aliasCount = (f.aliases || []).length;
+        const badge = f.custom
+          ? '<span class="id" style="background:#fff5f5;color:#D60019">관리자수정됨</span>'
+          : "";
+        return `
+        <div class="faq-list-row" data-vid="${escapeHtml(f.id)}">
+          <div class="head">
+            <div>
+              <span class="id">${escapeHtml(f.id)}</span>
+              <span style="margin-left:6px">${escapeHtml(f.category || "")}</span>
+              ${badge}
+              <span class="cnt" style="margin-left:6px">별칭 ${aliasCount}개</span>
+            </div>
+            <div>
+              <button class="btn" data-edit-verified="${escapeHtml(f.id)}">✏️ 수정</button>
+            </div>
+          </div>
+          <div class="question">${escapeHtml(f.question)}</div>
+          <div class="answer">${escapeHtml(f.answer.slice(0, 200))}${f.answer.length > 200 ? "..." : ""}</div>
+        </div>`;
+      })
+      .join("");
+    const more =
+      items.length > 50
+        ? `<div class="fb-empty">${items.length - 50}개 더 있음 — 검색으로 좁혀주세요</div>`
+        : "";
+    $vList.innerHTML = html + more;
+  }
+
+  if ($vList) {
+    $vList.addEventListener("click", (e) => {
+      const t = e.target;
+      if (t.dataset.editVerified) {
+        const id = t.dataset.editVerified;
+        const f = __verified.find((x) => x.id === id);
+        if (!f) return;
+        $editId.value = id;
+        $q.value = f.question || "";
+        $a.value = f.answer || "";
+        $al.value = (f.aliases || []).join(", ");
+        $cat.value = f.category || "관리자 추가";
+        $saveBtn.textContent = "💾 검증 FAQ 수정 저장";
+        $editInfo.textContent = "검증 FAQ 편집 중: " + id;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        toast(id + " 폼에 채워짐 — 수정 후 저장");
+      }
+    });
+  }
+
+  if ($vSearch) {
+    let debounce;
+    $vSearch.addEventListener("input", () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => renderVerified($vSearch.value), 200);
+    });
+  }
+
   // ===== 초기화 =====
   loadFaqs();
   loadFeedback();
   loadUnmatched();
+  loadVerified();
 })();

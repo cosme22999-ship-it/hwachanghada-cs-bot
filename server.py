@@ -49,7 +49,8 @@ KAKAO_PATH = Path(KAKAO_PATH_ENV) if KAKAO_PATH_ENV else None
 # 로그 DB (클라우드 ephemeral, 로컬 vault 자동 미러)
 DB_PATH = Path(os.environ.get("CSBOT_DB", str(HERE / "data" / "cs_bot.db")))
 
-# 관리자 비밀번호 (환경변수)
+# 관리자 인증 (환경변수)
+ADMIN_USERNAME = os.environ.get("CSBOT_ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("CSBOT_ADMIN_PASSWORD", "")
 
 # 저확신 임계값 (이 미만이면 로그됨)
@@ -354,8 +355,8 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(security)):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="ADMIN_PASSWORD env var not configured",
         )
-    ok_user = secrets.compare_digest(credentials.username, "admin")
-    ok_pw = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    ok_user = secrets.compare_digest(credentials.username.encode("utf-8"), ADMIN_USERNAME.encode("utf-8"))
+    ok_pw = secrets.compare_digest(credentials.password.encode("utf-8"), ADMIN_PASSWORD.encode("utf-8"))
     if not (ok_user and ok_pw):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

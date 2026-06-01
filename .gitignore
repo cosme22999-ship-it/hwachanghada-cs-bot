@@ -21,3 +21,4 @@ Thumbs.db
 # 데이터: 압축본(.gz)만 git에 포함, 원본은 제외
 data/verified_faq.json
 # data/*.db는 ignore (위에서 처리)
+.github/
